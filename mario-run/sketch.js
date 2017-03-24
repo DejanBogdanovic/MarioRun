@@ -6,56 +6,102 @@
 var GRAVITY = .3;
 var GROUND_Y = 450;
 var MIN_OPENING = 300;
-var marioStanding, marioJumping, marioRunning, marioDead, groundImg, pipeImg, backgroundImg;
+var marioStanding, marioJumping, marioRunning, marioDead, groundImg, pipeImg, backgroundImg, coinImg, enemyImg1, enemyImg2;
 var mario, ground;
 var gameOver;
-var pipes;
+var coinCount = 0;
+var pipes, coins, enemies;
 
 function preload() {
-   marioStanding = loadImage("img/Standing-Mario.gif");
+   marioStanding = loadImage("img/Standing-Mario-Copy.gif");
    marioJumping = loadImage("img/Jumping-Mario.gif");
    marioRunning = loadImage("img/Running-Mario.gif");
    marioDead = loadImage("img/Dead-Mario.gif");
-   groundImg = loadImage("img/Ground.png");
-   pipeImg = loadImage("img/Pipe.png");
+   groundImg = loadImage("img/Ground - Copy.png");
+   pipeImg = loadImage("img/Pipe2.png");
    backgroundImg = loadImage("img/Mario-Background.png");
+   coinImg = loadImage("img/Coin.png");
+	enemyImg1 = loadImage("img/Enemy1.jpg");
+	enemyImg2 = loadImage("img/Enemy2.png");
 }
 
 function setup() {
    createCanvas(800, 600);
    background(0,100,190);
-   mario = createSprite(width/3, height/1.2);
+   mario = createSprite(width/3, 552);
    mario.velocity.y = 4;
 
    // mario.setCollider("circle", 0,0,20);
    mario.addImage("mario", marioStanding);
-   //
-   ground = createSprite(0, 551);
+
+   ground = createSprite(400, 562);
    ground.addImage(groundImg);
-   //
+
    pipes = new Group();
+   coins = new Group();
+	enemies = new Group();
+
    gameOver = true;
-   // updateSprites(false);
-   //
-   // camera.position.y = height/2;
+   updateSprites(false);
+
+   camera.position.y = height/2;
 }
 
 function draw() {
    clear();
    background(0,100,190);
+
+   textSize(36);
+   textAlign(LEFT, TOP);
+
    if(gameOver) {
-      newGame();
-   }
+		text("Press Enter to start the game", -250, height/2);
+		if(keyIsDown(ENTER)) {
+			newGame();
+		}
+   } else {
+		//mario.velocity.y += GRAVITY;
 
-   if(!gameOver) {
-      //mario.velocity.y += GRAVITY;
+		//create obstacles and coins only if mario is moving
+		//otherwise multiple objects could be created at the same spot
+		if(keyIsDown(RIGHT_ARROW)) {
+			//create pipes
+			if(frameCount%120 == 0) {
+				var enemyNr = round(random(1,3));
+				console.log(enemyNr);
+				if(enemyNr == 1) {
+					var pipe = createSprite(mario.position.x + width, 481);
+					pipe.addImage(pipeImg);
+					pipes.add(pipe);
+				} else if(enemyNr == 2) {
+					var enemy = createSprite(mario.position.x + width, 481);
+					enemy.addImage(enemyImg1);
+					enemy.maxSpeed = 3;
+					enemy.attractionPoint(0.2, 0, 481);
+					enemies.add(enemy);
+				} else if(enemyNr == 3) {
+					var enemy = createSprite(mario.position.x + width, 481);
+					enemy.addImage(enemyImg2);
+					enemy.maxSpeed = 2;
+					enemy.attractionPoint(0.2, 0, 481);
+					enemies.add(enemy);
+				}
 
-      if(frameCount%60 == 0) {
-         var pipeH = 10;
-         var pipe = createSprite(mario.position.x + width, GROUND_Y-pipeH/2+1+100, 80, pipeH);
-         pipe.addImage(pipeImg);
-         pipes.add(pipe);
-      }
+			}
+
+		  //create coin
+			if(frameCount%40 == 0) {
+				var counter = random(1,4);
+				var spacing = 35;
+				for(var i = 0; i<=counter; i++) {
+					var coin = createSprite(mario.position.x + width+spacing, 400);
+					coin.addImage(coinImg);
+					coins.add(coin);
+					spacing += 35;
+				}
+
+			}
+		}
 
       //get rid of passed pipes
       for(var i = 0; i<pipes.length; i++) {
@@ -64,37 +110,71 @@ function draw() {
          }
       }
 
+		//get rid of passed coins
+      for(var i = 0; i<coins.length; i++) {
+         if(coins[i].position.x < mario.position.x-width/2) {
+            coins[i].remove();
+         }
+      }
 
-   }
+		//get rid of passed coins
+      for(var i = 0; i<enemies.length; i++) {
+         if(enemies[i].position.x < mario.position.x-width/2) {
+            enemies[i].remove();
+         }
+      }
 
-   // camera.position.x = mario.position.x + width/4;
-   //
-   // //wrap ground
-   // if(camera.position.x > ground.position.x-ground.width+width/2)
-   //   ground.position.x+=ground.width;
-   //
-   // camera.off();
-   // image(backgroundImg, 0, GROUND_Y-190);
-   // camera.on();
-   //
-   // drawSprites(pipes);
-   // drawSprite(ground);
-   if(keyIsDown(LEFT_ARROW)) {
-      mario.position.x -= 5;
-   } else if(keyIsDown(RIGHT_ARROW)) {
-      mario.position.x += 5;
-   }
+		//check if mario catches coin
+		mario.overlap(coins, getCoin);
+		text("Score: " + coinCount, mario.position.x-200, 20);
 
-   if(mario.position.y > 500) {
-      mario.position.y = 500;
-   }
+		//mario collides with one of the pipes
+      for(var i = 0; i<pipes.length; i++) {
+			mario.collide(pipes[i]);
+      }
 
-   drawSprites();
+		//mario collides with one of the enemies
+		for(var i = 0; i<enemies.length; i++) {
+			mario.collide(enemies[i]);
+			console.log("collide with enemy");
+			//gameOver = true;
+      }
+
+		camera.position.x = mario.position.x + width/4;
+
+		//wrap ground
+		//if(camera.position.x > ground.position.x-ground.width+width/2)
+		//  ground.position.x+=ground.width;
+
+		camera.off();
+		// image(backgroundImg, 0, GROUND_Y-190);
+	   camera.on();
+
+	   if(keyIsDown(LEFT_ARROW)) {
+		  mario.position.x -= 5;
+	   } else if(keyIsDown(RIGHT_ARROW)) {
+		  mario.position.x += 5;
+	   }
+
+	   if(mario.position.y > 486) {
+		  mario.position.y = 486;
+	   }
+
+	   drawSprites();
+	}
+
+}
+
+function getCoin(mario, coin) {
+	coin.remove();
+	coinCount += 1;
 }
 
 function keyPressed() {
    if(keyCode == UP_ARROW) {
-      mario.position.y -= 85;
+		if(mario.position.y = 486) {
+			mario.position.y -= 125;
+		}
    }
 }
 
@@ -103,10 +183,10 @@ function newGame() {
    gameOver = false;
    updateSprites(true);
    mario.position.x = width/3;
-   mario.position.y = height/1.2;
+   mario.position.y = 486;
    mario.velocity.y = 4;
-   ground.position.x = 0;
-   ground.position.y = 551;
+   ground.position.x = 400;
+   ground.position.y = 562;
 }
 
 function die() {
