@@ -161,7 +161,8 @@ function draw() {
     if(mario.position.y > 486) {
       mario.position.y = 486;
     }
-
+    console.log(mario.position.y);
+    console.log(mario.position.x);
     drawSprites();
   }
 
@@ -174,7 +175,7 @@ function getCoin(mario, coin) {
 
 function keyPressed() {
   if(keyCode == UP_ARROW) {
-    if(mario.position.y = 486) {
+    if(mario.position.y >= 486) {
       mario.position.y -= 125;
     }
   }
